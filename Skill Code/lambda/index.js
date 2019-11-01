@@ -9,19 +9,56 @@ const Alexa = require('ask-sdk-core');
 const interceptors = require( './Interceptors' );
 
 // Definiendo el obj para obtener  slots
-const {
-    getSlotValue
-} = require('ask-sdk-core');
+const {getSlotValue} = require('ask-sdk-core');
+
+//Importar la libreria de node fetch para consumir APIs
+const fetch = require('node-fetch');
+
+// these are the permissions needed to get the first name
+const GIVEN_NAME_PERMISSION = ['alexa::profile:given_name:read'];
+
+//Definiendo la url para el API de los arrays
+const categoryURL = 'https://beta.yoin.com.mx/api/alexa.php';
+//https://beta.yoin.com.mx/api/alexa.php
 
 
 const LaunchRequestHandler = {
     canHandle(handlerInput) {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest';
     },
-    handle(handlerInput) {
+    async handle(handlerInput) {
         
-        const requestAttributes = handlerInput.attributesManager.getRequestAttributes();
-        const speakOutput = requestAttributes.t('WELCOME_MESSAGE');
+        const { attributesManager, serviceClientFactory, requestEnvelope } = handlerInput;
+        const sessionAttributes = attributesManager.getSessionAttributes();
+        
+        if( !sessionAttributes['name'] )
+        {
+            //obtener desde apis de Alexa
+            try
+            {
+                const { permissions } = requestEnvelope.context.System.user;
+                if( !permissions )
+                    throw { statusCode: 401, message: 'No permissions available' }; //  there are zone permissions, no point in intializing the API
+                    
+                const upsServiceClient = serviceClientFactory.getUpsServiceClient();
+                const profileName = await upsServiceClient.getProfileGivenName();  
+                
+                if (profileName) { // the user might not have set the name
+                  //save to session and persisten attributes
+                  sessionAttributes['name'] = profileName;
+                } 
+            }catch( error ){
+                console.log(JSON.stringify(error));
+                if (error.statusCode === 401 || error.statusCode === 403) {
+                    // the user needs to enable the permissions for given name, let's send a silent permissions card.
+                  handlerInput.responseBuilder.withAskForPermissionsConsentCard(GIVEN_NAME_PERMISSION);
+                }
+            }
+        }//end if
+        
+        const requestAttributes = attributesManager.getRequestAttributes(); 
+        const name = sessionAttributes[ 'name' ] ? sessionAttributes['name' ] : '';
+        const speakOutput = requestAttributes.t('WELCOME_MESSAGE', name);
         
         return handlerInput.responseBuilder
             .speak(speakOutput)
@@ -42,7 +79,7 @@ const RulesIntentHandler = {
         
         return handlerInput.responseBuilder
             .speak(speakOutput)
-            //.reprompt('add a reprompt if you want to keep the session open for the user to respond')
+            .reprompt(speakOutput)
             .getResponse();
     }
 };//end RulesIntentHandler
@@ -78,9 +115,11 @@ const CategoryIntentHandler = {
         
         return handlerInput.responseBuilder
             .speak(speakOutput)
+            .reprompt(speakOutput)
             .getResponse();
     }
 };///end CategoryIntentHandler 
+            
 
 //GameIntentHandler
 const GameIntentHandler = {
@@ -88,46 +127,73 @@ const GameIntentHandler = {
         return Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest'
             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'GameIntent';
     },
-    handle( handlerInput )
+    async handle( handlerInput )
     {
         const { attributesManager, requestEnvelope } = handlerInput;
         const requestAttributes = attributesManager.getRequestAttributes();
+        const {intent} = handlerInput.requestEnvelope.request;
         
-        //Get values sessionAttributes
+        //Guardando el Json de categorias
+        const categoryJSON = await fetch(categoryURL).then(res => {return res.json()});
+        
+        //Obtener los valores de los atributos de Sesion
         const sessionAttributes = attributesManager.getSessionAttributes();
-        const categoryId = sessionAttributes.categoryId;
         const categoryName = sessionAttributes.category;
+        const categoryId = sessionAttributes.categoryId;
         
-        // speak
-        var speakOutput = null ;
+        var speakOutput = null;
+        var array = null;
+        var caricachupasAnwser = getSlotValue(handlerInput.requestEnvelope, 'Animaltype');
         
-         // get slot values
-        const {intent} = requestEnvelope.request; 
-        var animalName = getSlotValue(handlerInput.requestEnvelope, 'animalType');
-        sessionAttributes.animalName = animalName;
+        //Revisar si el usuario a seleccionado una categoria
+        if(!categoryName){
+            speakOutput = requestAttributes.t( 'SELECCIONAR_MSG' );
+            return handlerInput.responseBuilder
+                .speak(speakOutput)
+                .reprompt(speakOutput)
+                .getResponse();
+        }
+        
+        //Seleccionando el array a usar dependiendo de la categoria seleccionada
+        if(categoryId === '01'){
+            array = categoryJSON.animales;
+        } else if (categoryId === '02'){
+            array = categoryJSON.autos;
+        } else if (categoryId === '03'){
+            array = categoryJSON.países;
+        }
+        
+        //Revisa si el juego esta comenzando, si es el caso dice "caricachupas..."
+        if(caricachupasAnwser === undefined && !sessionAttributes.caricachupasAnwser){
+            speakOutput =  requestAttributes.t( 'CARICACHUPAS_MSG', categoryName);
+            return handlerInput.responseBuilder
+                .speak(speakOutput)
+                .reprompt(speakOutput)
+                .getResponse();
+        }
         
         
-        const animalArray = [ 'Caballos', 'Cerdos', 'Aves', 'Gatos', 'Perros', 'Patos' ];
-        if( animalName === undefined ){
-            
-            speakOutput = requestAttributes.t( 'CARICACHUPAS_MSG', categoryName );
-        }else{
-            
-            for( var i = 0; i < animalArray.length; i ++ ){
-                if( animalName === animalArray[i] ){
-                    speakOutput = requestAttributes.t( 'OK!' );
-                    animalName = undefined;
-                    break;
-                }else{
-                    speakOutput = requestAttributes.t( 'MAL!' );
-                    animalName = undefined;
-                    break;
-                }
+        //Si el juego no esta comenzando, y ya se selecciono una categoria, registra la palabra dicha y revisa si esta se encuentra dentro de la categoria
+        sessionAttributes.caricachupasAnwser = caricachupasAnwser;
+        for(var i = 0; i < array.length; i++){ //For para revisar dentro del array de la categoria
+            console.log(array[i]);
+            console.log(caricachupasAnwser);
+            console.log(caricachupasAnwser === array[i].toLowerCase());
+            if( caricachupasAnwser === array[i].toLowerCase()){ // Si la palabra esta dentro de la categoria Alexa dice "Excelente"
+            speakOutput = requestAttributes.t('OK_MSG');
+            return handlerInput.responseBuilder
+                .speak(speakOutput)
+                .reprompt(speakOutput)
+                .getResponse();
             }
         }
         
+        //Si la categoria no tiene ese palabra, pierdes el juegue
+        speakOutput =  requestAttributes.t( 'LOSE_MSG' );
+        
         return handlerInput.responseBuilder
             .speak(speakOutput)
+            .reprompt(speakOutput)
             .getResponse();
     }
 };///end GameIntentHandler
@@ -138,7 +204,9 @@ const HelpIntentHandler = {
             && Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.HelpIntent';
     },
     handle(handlerInput) {
-        const speakOutput = 'You can say hello to me! How can I help?';
+        const { attributesManager, requestEnvelope } = handlerInput;
+        const requestAttributes = attributesManager.getRequestAttributes();
+        const speakOutput = requestAttributes.t( 'HELP_MSG' );
 
         return handlerInput.responseBuilder
             .speak(speakOutput)
@@ -153,7 +221,9 @@ const CancelAndStopIntentHandler = {
                 || Alexa.getIntentName(handlerInput.requestEnvelope) === 'AMAZON.StopIntent');
     },
     handle(handlerInput) {
-        const speakOutput = 'Goodbye!';
+        const { attributesManager, requestEnvelope } = handlerInput;
+        const requestAttributes = attributesManager.getRequestAttributes();
+        const speakOutput = requestAttributes.t( 'GOODBYE_MSG' );
         return handlerInput.responseBuilder
             .speak(speakOutput)
             .getResponse();
@@ -228,4 +298,5 @@ exports.handler = Alexa.SkillBuilders.custom()
     .addErrorHandlers(
         ErrorHandler
     )
+    .withApiClient(new Alexa.DefaultApiClient() )
     .lambda();

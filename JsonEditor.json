@@ -5,7 +5,11 @@
             "intents": [
                 {
                     "name": "AMAZON.CancelIntent",
-                    "samples": []
+                    "samples": [
+                        "terminamos",
+                        "cancela",
+                        "no"
+                    ]
                 },
                 {
                     "name": "AMAZON.HelpIntent",
@@ -68,10 +72,11 @@
                     "slots": [
                         {
                             "name": "Animaltype",
-                            "type": "AnimalType"
+                            "type": "Response"
                         }
                     ],
                     "samples": [
+                        "claro",
                         "a darle",
                         "{Animaltype}",
                         "si vamos a darle",
@@ -87,21 +92,44 @@
             ],
             "types": [
                 {
-                    "name": "CarType",
+                    "name": "Response",
                     "values": [
                         {
                             "name": {
-                                "value": "TOYOTA"
+                                "value": "Volvo"
                             }
                         },
                         {
                             "name": {
-                                "value": "PORCHE"
+                                "value": "Tesla",
+                                "synonyms": [
+                                    "tesla"
+                                ]
                             }
                         },
                         {
                             "name": {
-                                "value": "NISSAN"
+                                "value": "Mercedes"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Mazda"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Jaguar"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Ford"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Ferrari"
                             }
                         },
                         {
@@ -111,38 +139,97 @@
                         },
                         {
                             "name": {
-                                "value": "FORD"
-                            }
-                        }
-                    ]
-                },
-                {
-                    "name": "AnimalType",
-                    "values": [
-                        {
-                            "name": {
-                                "value": "Acuaticos",
-                                "synonyms": [
-                                    "Peces"
-                                ]
+                                "value": "Audi"
                             }
                         },
                         {
                             "name": {
-                                "value": "Reptiles",
-                                "synonyms": [
-                                    "Reptil"
-                                ]
+                                "value": "Aston Martin"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Alfa Romeo"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Acura"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Francia"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Colombia"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Canadá"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Bolivia"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Australia"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "México"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Argentina"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Albania"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Leopardos"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Elefantes"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Cocodrilos"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Tiburones"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Conejos"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "Osos"
                             }
                         },
                         {
                             "name": {
                                 "value": "Caballos"
-                            }
-                        },
-                        {
-                            "name": {
-                                "value": "Aves"
                             }
                         },
                         {
@@ -168,7 +255,13 @@
                     "name": "CategoryType",
                     "values": [
                         {
-                            "id": "01",
+                            "id": "03",
+                            "name": {
+                                "value": "Países"
+                            }
+                        },
+                        {
+                            "id": "02",
                             "name": {
                                 "value": "Autos",
                                 "synonyms": [
@@ -183,7 +276,7 @@
                             }
                         },
                         {
-                            "id": "02",
+                            "id": "01",
                             "name": {
                                 "value": "Animales",
                                 "synonyms": [
@@ -238,7 +331,7 @@
                     "slots": [
                         {
                             "name": "Animaltype",
-                            "type": "AnimalType",
+                            "type": "Response",
                             "confirmationRequired": false,
                             "elicitationRequired": false,
                             "prompts": {}
@@ -272,7 +365,7 @@
                 "variations": [
                     {
                         "type": "PlainText",
-                        "value": "Conosco sólo dos categorías, de animales y de autos, elige una"
+                        "value": "Conozco las categorias de animales, autos o países. ¿Cual deseas?"
                     }
                 ]
             },
